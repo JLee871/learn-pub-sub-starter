@@ -3,11 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
-	"os/signal"
 
-	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
-	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
+	"github.com/JLee871/learn-pub-sub-starter/internal/gamelogic"
+	"github.com/JLee871/learn-pub-sub-starter/internal/pubsub"
+	"github.com/JLee871/learn-pub-sub-starter/internal/routing"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -31,12 +30,31 @@ func main() {
 		log.Fatal(err)
 	}
 
-	pubsub.PublishJSON(channel, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{IsPaused: true})
+	gamelogic.PrintServerHelp()
 
-	// wait for ctrl+c
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt)
-	<-signalChan
+InfiniteLoop:
+	for {
+		strings := gamelogic.GetInput()
+		if len(strings) == 0 {
+			continue
+		}
 
-	fmt.Println("\nConnection was shutdown.")
+		first := strings[0]
+		switch first {
+		case "pause":
+			fmt.Println("Sending a pause message.")
+			pubsub.PublishJSON(channel, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{IsPaused: true})
+
+		case "resume":
+			fmt.Println("Sending a resume message.")
+			pubsub.PublishJSON(channel, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{IsPaused: false})
+
+		case "quit":
+			fmt.Println("Exiting... connection was shutdown.")
+			break InfiniteLoop
+
+		default:
+			fmt.Println("Unfamiliar command.")
+		}
+	}
 }
