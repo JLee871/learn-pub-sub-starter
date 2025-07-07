@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
-	"os/signal"
 
 	"github.com/JLee871/learn-pub-sub-starter/internal/gamelogic"
 	"github.com/JLee871/learn-pub-sub-starter/internal/pubsub"
@@ -42,10 +40,49 @@ func main() {
 	}
 	fmt.Printf("Queue %v declared and bound!\n", queue.Name)
 
-	// wait for ctrl+c
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt)
-	<-signalChan
+	gameState := gamelogic.NewGameState(name)
+
+InfiniteLoop:
+	for {
+		words := gamelogic.GetInput()
+		if len(words) == 0 {
+			continue
+		}
+		command := words[0]
+
+		switch command {
+		case "spawn":
+			err := gameState.CommandSpawn(words)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+		case "move":
+			move, err := gameState.CommandMove(words)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			fmt.Printf("Move to %v was successful.\n", move.ToLocation)
+
+		case "status":
+			gameState.CommandStatus()
+
+		case "help":
+			gamelogic.PrintClientHelp()
+
+		case "spam":
+			fmt.Println("Spamming not allowed yet!")
+
+		case "quit":
+			gamelogic.PrintQuit()
+			break InfiniteLoop
+
+		default:
+			fmt.Println("Unfamiliar command.")
+		}
+	}
 
 	fmt.Println("\nClient was closed.")
 }
