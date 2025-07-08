@@ -27,20 +27,19 @@ func main() {
 		log.Fatal(err)
 	}
 
-	_, queue, err := pubsub.DeclareAndBind(
+	gameState := gamelogic.NewGameState(name)
+
+	err = pubsub.SubscribeJSON(
 		conn,
 		routing.ExchangePerilDirect,
-		routing.PauseKey+"."+name,
+		routing.PauseKey+"."+gameState.GetUsername(),
 		routing.PauseKey,
 		pubsub.Transient,
+		handlerPause(gameState),
 	)
-
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Queue %v declared and bound!\n", queue.Name)
-
-	gameState := gamelogic.NewGameState(name)
 
 InfiniteLoop:
 	for {
