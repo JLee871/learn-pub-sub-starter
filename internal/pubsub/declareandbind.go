@@ -24,13 +24,17 @@ func DeclareAndBind(
 		return nil, amqp.Queue{}, err
 	}
 
+	args := amqp.Table{
+		"x-dead-letter-exchange": "peril_dlx",
+	}
+
 	queue, err := ch.QueueDeclare(
 		queueName,            // name
 		queueType == Durable, // durable
 		queueType != Durable, // delete when unused
 		queueType != Durable, // exclusive
 		false,                // no-wait
-		nil,                  // args
+		args,                 // args
 	)
 	if err != nil {
 		return nil, amqp.Queue{}, err
