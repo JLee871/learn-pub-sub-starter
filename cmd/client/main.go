@@ -64,7 +64,7 @@ func main() {
 		routing.WarRecognitionsPrefix,
 		routing.WarRecognitionsPrefix+".*",
 		pubsub.Durable,
-		handlerWar(gameState),
+		handlerWar(gameState, channel),
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -96,7 +96,7 @@ InfiniteLoop:
 			err = pubsub.PublishJSON(
 				channel,
 				routing.ExchangePerilTopic,
-				routing.ArmyMovesPrefix+"."+gameState.GetUsername(),
+				routing.ArmyMovesPrefix+"."+move.Player.Username,
 				move,
 			)
 			if err != nil {

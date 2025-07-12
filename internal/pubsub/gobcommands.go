@@ -1,30 +1,26 @@
 package pubsub
 
 import (
+	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/gob"
 	"fmt"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-type AckType int
+func PublishGob[T any](ch *amqp.Channel, exchange, key string, val T) error {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
 
-const (
-	Ack AckType = iota
-	NackRequeue
-	NackDiscard
-)
-
-func PublishJSON[T any](ch *amqp.Channel, exchange, key string, val T) error {
-	bytes, err := json.Marshal(val)
+	err := enc.Encode(val)
 	if err != nil {
 		return err
 	}
 
 	msg := amqp.Publishing{
-		ContentType: "application/json",
-		Body:        bytes,
+		ContentType: "application/gob",
+		Body:        buf.Bytes(),
 	}
 
 	err = ch.PublishWithContext(context.Background(), exchange, key, false, false, msg)
@@ -35,7 +31,7 @@ func PublishJSON[T any](ch *amqp.Channel, exchange, key string, val T) error {
 	return nil
 }
 
-func SubscribeJSON[T any](
+func SubscribeGob[T any](
 	conn *amqp.Connection,
 	exchange,
 	queueName,
@@ -62,9 +58,11 @@ func SubscribeJSON[T any](
 	go func() {
 		defer ch.Close()
 		for delivery := range deliveries {
-			//json decoding
+			//gob decoding logic
+			input := bytes.NewBuffer(delivery.Body)
+			dec := gob.NewDecoder(input)
 			var output T
-			err := json.Unmarshal(delivery.Body, &output)
+			err := dec.Decode(&output)
 			if err != nil {
 				fmt.Printf("could not unmarshal message: %v\n", err)
 				continue
